@@ -1,9 +1,9 @@
 import re
 import pandas as pd
 
-from datetime import datetime as dt
+from datetime import datetime as dt, date
 
-menu_excel_sheet_path = r"D:\C DOWNLOADS\NEW MENU 2022.xlsx"
+menu_excel_sheet_path = r"NEW MENU 2022.xlsx"
 menu_book = pd.ExcelFile(menu_excel_sheet_path)
 
 months = {
@@ -60,6 +60,10 @@ months = {
 month_names = []
 [month_names.extend(i) for i in months.values()]
 
+def timediff(datetime_time_1, datetime_time_2):
+    common_date = date(1, 1, 1)
+    return abs(dt.combine(common_date, datetime_time_2) - dt.combine(common_date, datetime_time_1)).total_seconds()
+
 def remove_ordinality(number_name):
     # Source: https://stackoverflow.com/questions/6116978/how-to-replace-multiple-substrings-of-a-string
     rep = {"st": "",
@@ -100,27 +104,45 @@ mess_menu = {
     "dinner": [i[dt.now().weekday()] for i in mess_menu[33:41]]
 }
 
-current_time = dt.now().time()
-current_time = dt.strptime('7:34', '%H:%M').time()
+menu_timings_by_type = {
+  'breakfast': (dt.strptime('07:30', '%H:%M').time(), dt.strptime('09:30', '%H:%M').time()),
+  'lunch': (dt.strptime('12:00', '%H:%M').time(), dt.strptime('14:30', '%H:%M').time()),
+  'hitea': (dt.strptime('17:00', '%H:%M').time(), dt.strptime('18:00', '%H:%M').time()),
+  'dinner': (dt.strptime('19:30', '%H:%M').time(), dt.strptime('21:30', '%H:%M').time()),
+}
 
-if dt.strptime('07:30', '%H:%M').time() < current_time < dt.strptime('09:30', '%H:%M').time():
-    current_menu_type = 'breakfast'
-elif dt.strptime('12:00', '%H:%M').time() < current_time < dt.strptime('14:30', '%H:%M').time():
-    current_menu_type = 'lunch'
-elif dt.strptime('17:00', '%H:%M').time() < current_time < dt.strptime('18:00', '%H:%M').time():
-    current_menu_type = 'hitea'
-    current_mess_menu = mess_menu[current_menu_type]
-elif dt.strptime('19:30', '%H:%M').time() < current_time < dt.strptime('21:30', '%H:%M').time():
-    current_menu_type = 'dinner'
-else:
+def show_menu():
+  # current_time = dt.strptime('9:31', '%H:%M').time() # TODO: Test check, remove later
+  current_time = dt.now().time()
+
+  if current_time < menu_timings_by_type["breakfast"][0] and timediff(menu_timings_by_type["breakfast"][0], current_time) > 3600:
     mess_active = False
+
+  elif current_time <= menu_timings_by_type["breakfast"][1]:
+    current_menu_type = "breakfast"
+
+  elif current_time <= menu_timings_by_type["lunch"][1]:
+    current_menu_type = "lunch"
+
+  elif current_time <= menu_timings_by_type["hitea"][1]:
+      current_menu_type = "hitea"
+
+  elif current_time <= menu_timings_by_type["dinner"][1]:
+      current_menu_type = "dinner"
+
+  else:
+      mess_active = False
+
+  if mess_active:
+      current_mess_menu = mess_menu[current_menu_type]
+      print(f"Menu for {current_menu_type} -- {dt.now().strftime('%d/%m/%y - %A - %I:%M %p')}")
+      print('='*56)
+      for i in current_mess_menu:
+          if not isinstance(i, float):
+              print(i.strip().upper())
+
+  else:
     print("Mess has closed boii, go home :)")
 
-if mess_active:
-    current_mess_menu = mess_menu[current_menu_type]
-    print(f"Menu for {current_menu_type} -- {dt.now().strftime('%d/%m/%y - %A - %H:%M %p')}")
-    print('='*56)
-    for i in current_mess_menu:
-        if not isinstance(i, float):
-            print(i.strip().upper())
-
+if __name__ == "__main__":
+  show_menu()
